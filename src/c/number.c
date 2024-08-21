@@ -1,13 +1,11 @@
 #include "number.h"
 
-#include <memory.h>
 #include <string.h>
 
-static const GColor ACTIVE_BG = COLOR_FALLBACK(GColorGreen, GColorBlack);
-static const GColor ACTIVE_FG = COLOR_FALLBACK(GColorBlack, GColorWhite);
-static const GColor INACTIVE_BG = COLOR_FALLBACK(GColorLightGray, GColorWhite);
-static const GColor INACTIVE_FG =
-    COLOR_FALLBACK(GColorDarkGray, GColorDarkGray);
+static GColor ACTIVE_BG;
+static GColor ACTIVE_FG;
+static GColor INACTIVE_BG;
+static GColor INACTIVE_FG;
 static const int16_t FONT_SIZE_LABEL = 14;
 static const int16_t FONT_SIZE_VALUE = 28;
 static const int16_t VERTICAL_PADDING_LABEL = 6;
@@ -37,6 +35,10 @@ NumberLayer* number_layer_create(GRect frame,
                                  int8_t min,
                                  int8_t max,
                                  int8_t initial) {
+  ACTIVE_BG = COLOR_FALLBACK(GColorVividCerulean, GColorBlack);
+  ACTIVE_FG = COLOR_FALLBACK(GColorBlack, GColorWhite);
+  INACTIVE_BG = COLOR_FALLBACK(GColorLightGray, GColorWhite);
+  INACTIVE_FG = COLOR_FALLBACK(GColorDarkGray, GColorDarkGray);
   NumberLayer* layer = malloc(sizeof(NumberLayer));
   static const int16_t total_height = FONT_SIZE_LABEL + FONT_SIZE_VALUE +
                                       VERTICAL_PADDING_LABEL +

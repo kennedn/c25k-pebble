@@ -1,6 +1,6 @@
 #include "selector.h"
 
-#include <memory.h>
+
 
 #include "bitmap.h"
 #include "number.h"
@@ -26,7 +26,6 @@ typedef struct {
 struct _selector_t {
   Window* window;
   ActionBarLayer* action_bar;
-  StatusBarLayer* status_bar;
   NumberLayer* week;
   NumberLayer* day;
 
@@ -140,9 +139,6 @@ static void on_load(Window* window) {
                                              click_config_provider);
   action_bar_layer_add_to_window(selector->action_bar, window);
 
-  selector->status_bar = status_bar_layer_create();
-  layer_add_child(root, status_bar_layer_get_layer(selector->status_bar));
-
   // Adjust the bounds we use to lay out the number layers for the fixed
   // elements.
   number_layer_size = (GSize){
@@ -173,7 +169,6 @@ static void on_unload(Window* window) {
   SelectorWindow* selector = selector_retrieve(window);
 
   action_bar_layer_destroy(selector->action_bar);
-  status_bar_layer_destroy(selector->status_bar);
   number_layer_destroy(selector->week);
   number_layer_destroy(selector->day);
 }

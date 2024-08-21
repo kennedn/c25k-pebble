@@ -1,14 +1,15 @@
 #include "activity.h"
 
-#include <memory.h>
+
 
 #include "bitmap.h"
 #include "programme.h"
 #include "reward.h"
 
+static AppTimer *action_bar_timer;
 static const uint32_t MARKER_DEGREES = 2;
 static const int16_t MARKER_SIZE = 16;
-static const int16_t PHASE_HEIGHT = 18;
+static const int16_t PHASE_HEIGHT = 16;
 static const uint32_t TIMER_TIMEOUT_MS = 500;
 
 #ifdef PBL_ROUND
@@ -16,7 +17,7 @@ static const int16_t PADDING_SIZE = 30;
 static const int16_t RADIAL_WIDTH = 10;
 #else
 static const int16_t PADDING_SIZE = 5;
-static const int16_t RADIAL_WIDTH = 10;
+static const int16_t RADIAL_WIDTH = 16;
 #endif
 
 typedef enum {
@@ -36,7 +37,6 @@ struct ActivityWindow {
   Window* window;
   Layer* gfx;
   TextLayer* phase;
-  StatusBarLayer* status_bar;
   TextLayer* time_remaining;
   RewardWindow* reward;
 
@@ -69,7 +69,7 @@ static GColor state_colour(ProgrammeState state) {
       // The other colours in here are fine on the B&W Pebble screens, but the
       // green gets turned to white, which isn't really useful. We'll do what we
       // did with the number selector and instead use black to highlight.
-      return COLOR_FALLBACK(GColorBrightGreen, GColorBlack);
+      return COLOR_FALLBACK(GColorVividCerulean, GColorBlack);
 
     default:
       LOG_ERROR("unexpected programme state: %d", (int)state);
@@ -131,24 +131,27 @@ static void on_update_proc(Layer* layer, GContext* ctx) {
   // or greater than TRIG_MAX_ANGLE, so we have to implement our own wrapping.
   // Basically, if we're going to cross 0 or TRIG_MAX_ANGLE, we have to draw two
   // radials instead, just as we did above for the zero point.
-  if (marker_angle < marker_angle_delta / 2) {
-    graphics_fill_radial(
-        ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
-        (TRIG_MAX_ANGLE + marker_angle) - (marker_angle_delta / 2),
-        TRIG_MAX_ANGLE);
-    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE, 0,
-                         marker_angle + marker_angle_delta / 2);
-  } else if (marker_angle > (TRIG_MAX_ANGLE - marker_angle_delta / 2)) {
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
-                         marker_angle, TRIG_MAX_ANGLE);
-    graphics_fill_radial(
-        ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE, 0,
-        (marker_angle + marker_angle_delta / 2) - TRIG_MAX_ANGLE);
-  } else {
-    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
-                         marker_angle - marker_angle_delta / 2,
+                         0,
                          marker_angle + marker_angle_delta / 2);
-  }
+//   if (marker_angle < marker_angle_delta / 2) {
+//     graphics_fill_radial(
+//         ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
+//         (TRIG_MAX_ANGLE + marker_angle) - (marker_angle_delta / 2),
+//         TRIG_MAX_ANGLE);
+//     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE, 0,
+//                          marker_angle + marker_angle_delta / 2);
+//   } else if (marker_angle > (TRIG_MAX_ANGLE - marker_angle_delta / 2)) {
+//     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
+//                          marker_angle, TRIG_MAX_ANGLE);
+//     graphics_fill_radial(
+//         ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE, 0,
+//         (marker_angle + marker_angle_delta / 2) - TRIG_MAX_ANGLE);
+//   } else {
+//     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
+//                          marker_angle - marker_angle_delta / 2,
+//                          marker_angle + marker_angle_delta / 2);
+//   }
 }
 
 static void update_text_labels(ActivityWindow* activity) {
@@ -158,11 +161,11 @@ static void update_text_labels(ActivityWindow* activity) {
 
     if (phase_remaining / 60 > 9) {
       snprintf(activity->time_remaining_buffer,
-               sizeof(activity->time_remaining_buffer), "%2lld:%02lld",
+               sizeof(activity->time_remaining_buffer), "%2ld:%02ld",
                phase_remaining / 60, phase_remaining % 60);
     } else {
       snprintf(activity->time_remaining_buffer,
-               sizeof(activity->time_remaining_buffer), "%1lld:%02lld",
+               sizeof(activity->time_remaining_buffer), "%1ld:%02ld",
                phase_remaining / 60, phase_remaining % 60);
 
       if (phase_remaining == 0) {
@@ -286,11 +289,46 @@ static void on_button_down(ClickRecognizerRef ref, void* ctx) {
   }
 }
 
+static void action_bar_hide(void* data) {
+  ActionBarLayer* action_bar = (ActionBarLayer*)data;
+  layer_set_hidden(action_bar_layer_get_layer(action_bar), true);
+}
+
+static void on_button(ClickRecognizerRef ref, void* ctx) {
+  ActivityWindow* activity = (ActivityWindow*)ctx;
+
+#ifndef PBL_ROUND
+  layer_set_hidden(action_bar_layer_get_layer(activity->action_bar), false);
+  action_bar_timer = app_timer_register(1600, action_bar_hide, (void*)activity->action_bar);
+#endif
+
+  switch(click_recognizer_get_button_id(ref)) {
+    case BUTTON_ID_BACK:
+      on_button_back(ref, ctx);
+      break;
+
+    case BUTTON_ID_SELECT:
+      on_button_select(ref, ctx);
+      break;
+
+    case BUTTON_ID_UP:
+      on_button_up(ref, ctx);
+      break;
+
+    case BUTTON_ID_DOWN:
+      on_button_down(ref, ctx);
+      break;
+    case NUM_BUTTONS:
+      break;
+  }
+
+}
+
 static void click_config_provider(void* ctx) {
-  window_single_click_subscribe(BUTTON_ID_BACK, on_button_back);
-  window_single_click_subscribe(BUTTON_ID_SELECT, on_button_select);
-  window_single_click_subscribe(BUTTON_ID_UP, on_button_up);
-  window_single_click_subscribe(BUTTON_ID_DOWN, on_button_down);
+  window_single_click_subscribe(BUTTON_ID_BACK, on_button);
+  window_single_click_subscribe(BUTTON_ID_SELECT, on_button);
+  window_single_click_subscribe(BUTTON_ID_UP, on_button);
+  window_single_click_subscribe(BUTTON_ID_DOWN, on_button);
 }
 
 static void on_load(Window* window) {
@@ -302,22 +340,8 @@ static void on_load(Window* window) {
   // status and action bars, and instead use extra padding to avoid overlaps.
   GRect bounds = layer_get_bounds(root);
 #else
-  GRect bounds = calculate_bounds_with_status_action_bars(root);
+  GRect bounds = layer_get_unobstructed_bounds(root);
 #endif
-
-#ifndef PBL_ROUND
-  activity->action_bar = action_bar_layer_create();
-  action_bar_layer_set_context(activity->action_bar, activity);
-  action_bar_layer_set_click_config_provider(activity->action_bar,
-                                             click_config_provider);
-  action_bar_layer_add_to_window(activity->action_bar, activity->window);
-#else
-  window_set_click_config_provider_with_context(
-      activity->window, click_config_provider, activity);
-#endif
-
-  activity->status_bar = status_bar_layer_create();
-  layer_add_child(root, status_bar_layer_get_layer(activity->status_bar));
 
   // By working from the outside in, we can incrementally reduce the size of the
   // bounds. First up, we'll just move in the padding size for the graphics
@@ -357,6 +381,21 @@ static void on_load(Window* window) {
                       fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text(activity->phase, activity->phase_buffer);
   layer_add_child(root, text_layer_get_layer(activity->phase));
+
+#ifndef PBL_ROUND
+  activity->action_bar = action_bar_layer_create();
+  action_bar_layer_set_context(activity->action_bar, activity);
+  action_bar_layer_set_click_config_provider(activity->action_bar,
+                                             click_config_provider);
+  action_bar_layer_add_to_window(activity->action_bar, activity->window);
+  action_bar_hide((void*)activity->action_bar);
+#else
+  window_set_click_config_provider_with_context(
+      activity->window, click_config_provider, activity);
+#endif
+
+
+
 }
 
 static void on_unload(Window* window) {
@@ -368,7 +407,6 @@ static void on_unload(Window* window) {
 
   layer_destroy(activity->gfx);
   text_layer_destroy(activity->phase);
-  status_bar_layer_destroy(activity->status_bar);
   text_layer_destroy(activity->time_remaining);
 }
 

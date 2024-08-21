@@ -1,13 +1,15 @@
 #include "reward.h"
 
-#include <memory.h>
-
 static const char* messages[] = {
     "You did it!",
-    "That's one small step for man, one giant leap for runningkind.",
-    "Wherever you go, there you are!",
-    "I'm just a watch. Beep boop. But you're doing a good job!",
-    "Good job! Hit the showers. Or don't. I'm not the boss of you.",
+    "Well done!",
+    "Great job!",
+    "Congrats!",
+    "Amazing work!",
+    "Keep up the good work!",
+    "Fantastic job!",
+    "Bravo!",
+    "Impressive!",
 };
 
 struct RewardWindow {
@@ -38,6 +40,7 @@ static void on_load(Window* window) {
   window_set_click_config_provider_with_context(reward->window,
                                                 click_config_provider, reward);
 
+  bounds.origin.y = bounds.size.h / 2 - 14;
   reward->text = text_layer_create(bounds);
   text_layer_set_text(
       reward->text,
