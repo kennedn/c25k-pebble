@@ -6,10 +6,9 @@
 #include "programme.h"
 #include "reward.h"
 
-static AppTimer *action_bar_timer;
 static const uint32_t MARKER_DEGREES = 2;
 static const int16_t MARKER_SIZE = 16;
-static const int16_t PHASE_HEIGHT = 16;
+static const int16_t PHASE_HEIGHT = 36;
 static const uint32_t TIMER_TIMEOUT_MS = 500;
 
 #ifdef PBL_ROUND
@@ -31,6 +30,7 @@ struct ActivityWindow {
   time_t started_at;
   ActivityState state;
   AppTimer* timer;
+  AppTimer *action_bar_timer;
 
   const Programme* programme;
 
@@ -127,31 +127,12 @@ static void on_update_proc(Layer* layer, GContext* ctx) {
   // Calculate and draw the marker showing our actual progression to date.
   graphics_context_set_fill_color(ctx, GColorRed);
   marker_angle = calculate_angle(activity->elapsed, userdata.total_duration);
-  // This gets a bit ugly: the radial function can't handle values less than 0
-  // or greater than TRIG_MAX_ANGLE, so we have to implement our own wrapping.
-  // Basically, if we're going to cross 0 or TRIG_MAX_ANGLE, we have to draw two
-  // radials instead, just as we did above for the zero point.
-    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
-                         0,
-                         marker_angle + marker_angle_delta / 2);
-//   if (marker_angle < marker_angle_delta / 2) {
-//     graphics_fill_radial(
-//         ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
-//         (TRIG_MAX_ANGLE + marker_angle) - (marker_angle_delta / 2),
-//         TRIG_MAX_ANGLE);
-//     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE, 0,
-//                          marker_angle + marker_angle_delta / 2);
-//   } else if (marker_angle > (TRIG_MAX_ANGLE - marker_angle_delta / 2)) {
-//     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
-//                          marker_angle, TRIG_MAX_ANGLE);
-//     graphics_fill_radial(
-//         ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE, 0,
-//         (marker_angle + marker_angle_delta / 2) - TRIG_MAX_ANGLE);
-//   } else {
-//     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
-//                          marker_angle - marker_angle_delta / 2,
-//                          marker_angle + marker_angle_delta / 2);
-//   }
+  graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
+                        0,
+                        marker_angle + marker_angle_delta / 2);
+  // graphics_context_set_stroke_color(ctx, GColorRed);
+  // graphics_draw_rect(ctx, layer_get_frame(text_layer_get_layer(activity->phase)));
+  // graphics_draw_rect(ctx, layer_get_frame(text_layer_get_layer(activity->time_remaining)));
 }
 
 static void update_text_labels(ActivityWindow* activity) {
@@ -202,7 +183,8 @@ static void activity_complete(ActivityWindow* activity) {
 
 static void on_tick(void* userdata) {
   ActivityWindow* activity = (ActivityWindow*)userdata;
-
+  activity->timer = NULL;
+  activity->started_at -= 61;
   activity->elapsed = time(NULL) - activity->started_at;
   if (activity->elapsed >= programme_duration(activity->programme)) {
     activity_window_set_active(activity, false);
@@ -289,17 +271,24 @@ static void on_button_down(ClickRecognizerRef ref, void* ctx) {
   }
 }
 
-static void action_bar_hide(void* data) {
-  ActionBarLayer* action_bar = (ActionBarLayer*)data;
-  layer_set_hidden(action_bar_layer_get_layer(action_bar), true);
+#ifndef PBL_ROUND
+static void action_bar_hide(void* ctx) {
+  ActivityWindow* activity = (ActivityWindow*)ctx;
+  activity->action_bar_timer = NULL;
+  layer_set_hidden(action_bar_layer_get_layer(activity->action_bar), true);
 }
+#endif
 
 static void on_button(ClickRecognizerRef ref, void* ctx) {
   ActivityWindow* activity = (ActivityWindow*)ctx;
 
 #ifndef PBL_ROUND
   layer_set_hidden(action_bar_layer_get_layer(activity->action_bar), false);
-  action_bar_timer = app_timer_register(1600, action_bar_hide, (void*)activity->action_bar);
+  if (activity->action_bar_timer) {
+    app_timer_reschedule(activity->action_bar_timer, 1600);
+  } else {
+    activity->action_bar_timer = app_timer_register(1600, action_bar_hide, (void*)activity);
+  }
 #endif
 
   switch(click_recognizer_get_button_id(ref)) {
@@ -352,48 +341,47 @@ static void on_load(Window* window) {
   bounds.origin.y += PADDING_SIZE;
   activity->gfx = layer_create(bounds);
   layer_set_update_proc(activity->gfx, on_update_proc);
-  layer_add_child(root, activity->gfx);
 
   // Now we want to constrain the text layers to the inside of the circle. If we
   // were doing this properly, there'd be a square root involved somewhere. But
   // since not all Pebbles have a FPU and I don't care for pixel precision,
   // we'll just put some fudge in and it'll all be fine. Mmmm. Fudge.
-  const uint16_t circle_radius = bounds.size.w - RADIAL_WIDTH * 5;
+  const uint16_t circle_radius = bounds.size.w - RADIAL_WIDTH * 3;
   bounds.origin.x += bounds.size.w / 2 - circle_radius / 2;
-  bounds.origin.y += bounds.size.h / 2 - circle_radius / 2;
+  bounds.origin.y += bounds.size.h / 2 - circle_radius / 2 + PHASE_HEIGHT / 3;
   bounds.size.w = circle_radius;
-  bounds.size.h = circle_radius;
-
+  bounds.size.h = 32;
   activity->time_remaining = text_layer_create(bounds);
   text_layer_set_text_alignment(activity->time_remaining, GTextAlignmentCenter);
+  text_layer_set_overflow_mode(activity->time_remaining, GTextOverflowModeTrailingEllipsis);
   text_layer_set_font(activity->time_remaining,
-                      fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+                      fonts_get_system_font(FONT_KEY_LECO_32_BOLD_NUMBERS));
   text_layer_set_text(activity->time_remaining,
                       activity->time_remaining_buffer);
   layer_add_child(root, text_layer_get_layer(activity->time_remaining));
 
   // Finally, put the phase label below the time remaining.
-  bounds.origin.y += bounds.size.h - PHASE_HEIGHT;
-  bounds.size.h = PHASE_HEIGHT;
+  bounds.origin.y += bounds.size.h + 4;
+  bounds.size.h = 22;
   activity->phase = text_layer_create(bounds);
   text_layer_set_text_alignment(activity->phase, GTextAlignmentCenter);
   text_layer_set_font(activity->phase,
-                      fonts_get_system_font(FONT_KEY_GOTHIC_14));
+                      fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text(activity->phase, activity->phase_buffer);
   layer_add_child(root, text_layer_get_layer(activity->phase));
 
+  layer_add_child(root, activity->gfx);
 #ifndef PBL_ROUND
   activity->action_bar = action_bar_layer_create();
   action_bar_layer_set_context(activity->action_bar, activity);
   action_bar_layer_set_click_config_provider(activity->action_bar,
                                              click_config_provider);
   action_bar_layer_add_to_window(activity->action_bar, activity->window);
-  action_bar_hide((void*)activity->action_bar);
+  action_bar_hide((void*)activity);
 #else
   window_set_click_config_provider_with_context(
       activity->window, click_config_provider, activity);
 #endif
-
 
 
 }
@@ -467,9 +455,13 @@ void activity_window_set_active(ActivityWindow* activity, bool active) {
 #endif
 
     activity->state = ACTIVITY_PAUSED;
-    if (activity->timer) {
+    if(activity->timer) {
       app_timer_cancel(activity->timer);
       activity->timer = NULL;
+    }
+    if(activity->action_bar_timer) {
+      app_timer_cancel(activity->action_bar_timer);
+      activity->action_bar_timer = NULL;
     }
   }
 }

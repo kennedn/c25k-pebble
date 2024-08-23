@@ -1,4 +1,3 @@
-#include <time.h>
 #include "c25k-pebble.h"
 #include "activity.h"
 #include "bitmap.h"
