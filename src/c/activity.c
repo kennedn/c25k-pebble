@@ -11,7 +11,7 @@ static const int16_t PHASE_HEIGHT = 36;
 static const uint32_t TIMER_TIMEOUT_MS = 500;
 
 #ifdef PBL_ROUND
-static const int16_t PADDING_SIZE = 0;
+static const int16_t PADDING_SIZE = -1;
 static const int16_t RADIAL_WIDTH = 32;
 static const int16_t MARKER_SIZE = 32;
 #else
