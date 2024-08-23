@@ -184,7 +184,6 @@ static void activity_complete(ActivityWindow* activity) {
 static void on_tick(void* userdata) {
   ActivityWindow* activity = (ActivityWindow*)userdata;
   activity->timer = NULL;
-  activity->started_at -= 61;
   activity->elapsed = time(NULL) - activity->started_at;
   if (activity->elapsed >= programme_duration(activity->programme)) {
     activity_window_set_active(activity, false);
