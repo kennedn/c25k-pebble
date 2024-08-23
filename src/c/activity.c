@@ -7,17 +7,19 @@
 #include "reward.h"
 
 static const uint32_t MARKER_DEGREES = 2;
-static const int16_t MARKER_SIZE = 16;
 static const int16_t PHASE_HEIGHT = 36;
 static const uint32_t TIMER_TIMEOUT_MS = 500;
 
 #ifdef PBL_ROUND
-static const int16_t PADDING_SIZE = 30;
-static const int16_t RADIAL_WIDTH = 10;
+static const int16_t PADDING_SIZE = 0;
+static const int16_t RADIAL_WIDTH = 32;
+static const int16_t MARKER_SIZE = 32;
 #else
 static const int16_t PADDING_SIZE = 5;
 static const int16_t RADIAL_WIDTH = 16;
+static const int16_t MARKER_SIZE = 16;
 #endif
+
 
 typedef enum {
   ACTIVITY_ACTIVE,
