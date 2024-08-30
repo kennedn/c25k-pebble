@@ -37,17 +37,20 @@ static void on_load(Window* window) {
   RewardWindow* reward = (RewardWindow*)window_get_user_data(window);
   Layer* root = window_get_root_layer(window);
   GRect bounds = layer_get_unobstructed_bounds(root);
+  window_set_background_color(reward->window, GColorJaegerGreen);
 
   window_set_click_config_provider_with_context(reward->window,
                                                 click_config_provider, reward);
   char *message = (char *)messages[rand() % (sizeof(messages) / sizeof(messages[0]))];
 
-  bounds.origin.y = bounds.size.h / 2 - graphics_text_layout_get_content_size(message, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), bounds, GTextOverflowModeWordWrap, GTextAlignmentCenter).h / 2;
+  bounds.origin.y = bounds.size.h / 2 - (graphics_text_layout_get_content_size(message, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), bounds, GTextOverflowModeWordWrap, GTextAlignmentCenter).h / 2 * 1.2);
   reward->text = text_layer_create(bounds);
   text_layer_set_text(reward->text, message);
   text_layer_set_font(reward->text,
                       fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(reward->text, GTextAlignmentCenter);
+  text_layer_set_text_color(reward->text, GColorWhite);
+  text_layer_set_background_color(reward->text, GColorJaegerGreen);
   text_layer_set_overflow_mode(reward->text, GTextOverflowModeWordWrap);
   layer_add_child(root, text_layer_get_layer(reward->text));
 }

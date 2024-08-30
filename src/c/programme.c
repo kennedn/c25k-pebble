@@ -101,7 +101,7 @@ static const struct {
         .programme = {week2},
     },
     {
-        .week = 3,
+        .week = 2,
         .day = 3,
         .programme = {week2},
     },

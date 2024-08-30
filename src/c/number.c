@@ -35,7 +35,7 @@ NumberLayer* number_layer_create(GRect frame,
                                  int8_t min,
                                  int8_t max,
                                  int8_t initial) {
-  ACTIVE_BG = COLOR_FALLBACK(GColorVividCerulean, GColorBlack);
+  ACTIVE_BG = COLOR_FALLBACK(GColorWhite, GColorBlack);
   ACTIVE_FG = COLOR_FALLBACK(GColorBlack, GColorWhite);
   INACTIVE_BG = COLOR_FALLBACK(GColorLightGray, GColorWhite);
   INACTIVE_FG = COLOR_FALLBACK(GColorDarkGray, GColorDarkGray);
@@ -60,7 +60,7 @@ NumberLayer* number_layer_create(GRect frame,
       .size = {frame.size.w, FONT_SIZE_LABEL + VERTICAL_PADDING_LABEL},
   });
   text_layer_set_background_color(layer->label, GColorClear);
-  text_layer_set_text_color(layer->label, GColorDarkGray);
+  text_layer_set_text_color(layer->label, GColorWhite);
   text_layer_set_font(layer->label,
                       fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
   text_layer_set_text_alignment(layer->label, GTextAlignmentCenter);

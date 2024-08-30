@@ -62,16 +62,16 @@ static GColor state_colour(ProgrammeState state) {
   switch (state) {
     case PROGRAMME_STATE_WARM_UP:
     case PROGRAMME_STATE_WARM_DOWN:
-      return GColorLightGray;
+      return GColorWhite;
 
     case PROGRAMME_STATE_WALK:
-      return GColorDarkGray;
+      return GColorWhite;
 
     case PROGRAMME_STATE_RUN:
       // The other colours in here are fine on the B&W Pebble screens, but the
       // green gets turned to white, which isn't really useful. We'll do what we
       // did with the number selector and instead use black to highlight.
-      return COLOR_FALLBACK(GColorVividCerulean, GColorBlack);
+      return COLOR_FALLBACK(GColorJaegerGreen, GColorBlack);
 
     default:
       LOG_ERROR("unexpected programme state: %d", (int)state);
@@ -100,7 +100,7 @@ static void on_update_proc(Layer* layer, GContext* ctx) {
   ActivityWindow* activity =
       (ActivityWindow*)window_get_user_data(layer_get_window(layer));
   GRect bounds = layer_get_bounds(layer);
-  uint32_t marker_angle;
+  int16_t window_width = layer_get_unobstructed_bounds(layer).size.w;
   static const uint32_t marker_angle_delta = DEG_TO_TRIGANGLE(MARKER_DEGREES);
   StateIteratorData userdata = {
       .bounds = bounds,
@@ -119,8 +119,7 @@ static void on_update_proc(Layer* layer, GContext* ctx) {
   bounds.origin.x -= (MARKER_SIZE - RADIAL_WIDTH) / 2;
   bounds.origin.y -= (MARKER_SIZE - RADIAL_WIDTH) / 2;
 
-  // Draw the zero point in white, just to make it obvious.
-  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_context_set_fill_color(ctx, GColorJaegerGreen);
   graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
                        TRIG_MAX_ANGLE - marker_angle_delta, TRIG_MAX_ANGLE);
   graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
@@ -128,13 +127,14 @@ static void on_update_proc(Layer* layer, GContext* ctx) {
 
   // Calculate and draw the marker showing our actual progression to date.
   graphics_context_set_fill_color(ctx, GColorRed);
-  marker_angle = calculate_angle(activity->elapsed, userdata.total_duration);
+  uint32_t marker_angle = calculate_angle(activity->elapsed, userdata.total_duration);
   graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, MARKER_SIZE,
                         0,
                         marker_angle + marker_angle_delta / 2);
-  // graphics_context_set_stroke_color(ctx, GColorRed);
-  // graphics_draw_rect(ctx, layer_get_frame(text_layer_get_layer(activity->phase)));
-  // graphics_draw_rect(ctx, layer_get_frame(text_layer_get_layer(activity->time_remaining)));
+  graphics_context_set_stroke_color(ctx, GColorFromHEX(0x1c7d7a));
+  graphics_context_set_stroke_width(ctx, 2);
+  graphics_draw_circle(ctx, grect_center_point(&bounds), window_width / 2 - RADIAL_WIDTH - 1);
+  graphics_draw_circle(ctx, grect_center_point(&bounds), window_width / 2 - 1);
 }
 
 static void update_text_labels(ActivityWindow* activity) {
@@ -324,6 +324,7 @@ static void click_config_provider(void* ctx) {
 static void on_load(Window* window) {
   ActivityWindow* activity = (ActivityWindow*)window_get_user_data(window);
   Layer* root = window_get_root_layer(window);
+  window_set_background_color(window, GColorJaegerGreen);
 
 #ifdef PBL_ROUND
   // To centre a circle within the round watch screen, we have to ignore the
@@ -347,13 +348,15 @@ static void on_load(Window* window) {
   // were doing this properly, there'd be a square root involved somewhere. But
   // since not all Pebbles have a FPU and I don't care for pixel precision,
   // we'll just put some fudge in and it'll all be fine. Mmmm. Fudge.
-  const uint16_t circle_radius = bounds.size.w - RADIAL_WIDTH * 3;
+  const uint16_t circle_radius = bounds.size.w - RADIAL_WIDTH * 2.5;
   bounds.origin.x += bounds.size.w / 2 - circle_radius / 2;
-  bounds.origin.y += bounds.size.h / 2 - circle_radius / 2 + PHASE_HEIGHT / 3;
+  bounds.origin.y += bounds.size.h / 2 - circle_radius / 2 + 20;
   bounds.size.w = circle_radius;
   bounds.size.h = 32;
   activity->time_remaining = text_layer_create(bounds);
   text_layer_set_text_alignment(activity->time_remaining, GTextAlignmentCenter);
+  text_layer_set_background_color(activity->time_remaining, GColorJaegerGreen);
+  text_layer_set_text_color(activity->time_remaining, GColorWhite);
   text_layer_set_overflow_mode(activity->time_remaining, GTextOverflowModeTrailingEllipsis);
   text_layer_set_font(activity->time_remaining,
                       fonts_get_system_font(FONT_KEY_LECO_32_BOLD_NUMBERS));
@@ -366,6 +369,8 @@ static void on_load(Window* window) {
   bounds.size.h = 22;
   activity->phase = text_layer_create(bounds);
   text_layer_set_text_alignment(activity->phase, GTextAlignmentCenter);
+  text_layer_set_background_color(activity->phase, GColorJaegerGreen);
+  text_layer_set_text_color(activity->phase, GColorWhite);
   text_layer_set_font(activity->phase,
                       fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text(activity->phase, activity->phase_buffer);
@@ -377,6 +382,7 @@ static void on_load(Window* window) {
   action_bar_layer_set_context(activity->action_bar, activity);
   action_bar_layer_set_click_config_provider(activity->action_bar,
                                              click_config_provider);
+  action_bar_layer_set_background_color(activity->action_bar, GColorWhite);
   action_bar_layer_add_to_window(activity->action_bar, activity->window);
   action_bar_hide((void*)activity);
 #else

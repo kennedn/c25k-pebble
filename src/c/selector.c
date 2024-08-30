@@ -128,12 +128,16 @@ static void on_load(Window* window) {
   GRect bounds = calculate_bounds_with_status_action_bars(root);
   GSize number_layer_size;
 
+  window_set_background_color(window, GColorJaegerGreen);
+
   selector->action_bar = action_bar_layer_create();
   action_bar_layer_set_icon(selector->action_bar, BUTTON_ID_UP, image_arrow_up);
   action_bar_layer_set_icon(selector->action_bar, BUTTON_ID_DOWN,
                             image_arrow_down);
   action_bar_layer_set_icon(selector->action_bar, BUTTON_ID_SELECT,
                             image_arrow_right);
+  action_bar_layer_set_background_color(selector->action_bar,
+                                        GColorWhite);
   action_bar_layer_set_context(selector->action_bar, selector);
   action_bar_layer_set_click_config_provider(selector->action_bar,
                                              click_config_provider);
