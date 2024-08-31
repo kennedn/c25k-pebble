@@ -62,7 +62,7 @@ static GColor state_colour(ProgrammeState state) {
   switch (state) {
     case PROGRAMME_STATE_WARM_UP:
     case PROGRAMME_STATE_WARM_DOWN:
-      return GColorWhite;
+      return GColorLightGray;
 
     case PROGRAMME_STATE_WALK:
       return GColorWhite;
